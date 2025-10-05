@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jogo da Velha Imbatível</title>
+<style>
+  body { font-family: Arial, sans-serif; text-align: center; background: #f4f4f4; }
+  h1 { margin-top: 20px; }
+  #board { display: grid; grid-template-columns: repeat(3, 100px); gap: 5px; margin: 20px auto; }
+  .cell {
+    width: 100px; height: 100px;
+    background: #fff; border: 2px solid #333;
+    font-size: 60px; display: flex; justify-content: center; align-items: center;
+    cursor: pointer;
+  }
+  #status { margin-top: 20px; font-size: 18px; }
+  button { margin-top: 20px; padding: 10px 20px; font-size: 16px; cursor: pointer; }
+</style>
+</head>
+<body>
+<h1>Jogo da Velha - Imbatível</h1>
+<div id="board"></div>
+<div id="status">Sua vez!</div>
+<button id="resetBtn">Reiniciar</button>
+
+<script>
+const board = Array(9).fill(null);
+const player = 'X';
+const ai = 'O';
+const boardDiv = document.getElementById('board');
+const statusDiv = document.getElementById('status');
+
+// Cria o tabuleiro
+function createBoard() {
+  boardDiv.innerHTML = '';
+  board.forEach((cell, i) => {
+    const div = document.createElement('div');
+    div.classList.add('cell');
+    div.dataset.index = i;
+    div.textContent = cell || '';
+    div.addEventListener('click', () => playerMove(i));
+    boardDiv.appendChild(div);
+  });
+}
+
+// Checa se alguém ganhou
+function checkWinner(b) {
+  const winCombos = [
+    [0,1,2],[3,4,5],[6,7,8],
+    [0,3,6],[1,4,7],[2,5,8],
+    [0,4,8],[2,4,6]
+  ];
+  for (let combo of winCombos) {
+    const [a,b1,c] = combo;
+    if (b[a] && b[a] === b[b1] && b[a] === b[c]) return b[a];
+  }
+  return b.includes(null) ? null : 'tie';
+}
+
+// Jogada do jogador
+function playerMove(i) {
+  if (board[i] || checkWinner(board)) return;
+  board[i] = player;
+  updateBoard();
+  const winner = checkWinner(board);
+  if (winner) return endGame(winner);
+  aiMove();
+}
+
+// Jogada do AI (estratégia perfeita)
+function aiMove() {
+  const best = minimax(board, ai).index;
+  board[best] = ai;
+  updateBoard();
+  const winner = checkWinner(board);
+  if (winner) endGame(winner);
+}
+
+// Atualiza o tabuleiro na tela
+function updateBoard() {
+  board.forEach((cell,i) => boardDiv.children[i].textContent = cell || '');
+}
+
+// Termina o jogo
+function endGame(winner) {
+  if (winner === 'tie') statusDiv.textContent = 'Empate!';
+  else statusDiv.textContent = winner === player ? 'Você venceu!' : 'AI venceu!';
+}
+
+// Reinicia o jogo
+document.getElementById('resetBtn').addEventListener('click', () => {
+  for(let i=0;i<9;i++) board[i] = null;
+  statusDiv.textContent = 'Sua vez!';
+  createBoard();
+});
+
+createBoard();
+
+// Minimax (estratégia perfeita)
+function minimax(newBoard, playerTurn) {
+  const avail = newBoard.map((v,i)=>v===null? i:null).filter(v=>v!==null);
+  const winner = checkWinner(newBoard);
+  if (winner === player) return {score: -10};
+  if (winner === ai) return {score: 10};
+  if (avail.length === 0) return {score:0};
+
+  const moves = [];
+  for (let i of avail) {
+    const move = {};
+    move.index = i;
+    newBoard[i] = playerTurn;
+    if (playerTurn === ai) {
+      const result = minimax(newBoard, player);
+      move.score = result.score;
+    } else {
+      const result = minimax(newBoard, ai);
+      move.score = result.score;
+    }
+    newBoard[i] = null;
+    moves.push(move);
+  }
+
+  let bestMove;
+  if (playerTurn === ai) {
+    let bestScore = -Infinity;
+    for (let m of moves) if (m.score > bestScore) { bestScore = m.score; bestMove = m; }
+  } else {
+    let bestScore = Infinity;
+    for (let m of moves) if (m.score < bestScore) { bestScore = m.score; bestMove = m; }
+  }
+  return bestMove;
+}
+</script>
+</body>
+</html>
